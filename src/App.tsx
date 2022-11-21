@@ -1,10 +1,23 @@
 import React from 'react';
 import './App.css';
 import { Game } from './Game';
+import { css } from '@emotion/css';
+
+// 222831
+// 393E46
+// D65A31
+// EEEEEE
 
 function App() {
+
+  const appStyle = css({
+    backgroundColor: '#393E46',
+    'text-align': 'center',
+    overflow: 'hidden',
+  });
+
   return (
-    <div className="App">
+    <div className={appStyle}>
       <Game />
     </div>
   );
