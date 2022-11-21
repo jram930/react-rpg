@@ -11,7 +11,7 @@ import { css } from '@emotion/css';
 function App() {
 
   const appStyle = css({
-    backgroundColor: '#393E46',
+    backgroundColor: '#222831',
     'text-align': 'center',
     overflow: 'hidden',
   });
