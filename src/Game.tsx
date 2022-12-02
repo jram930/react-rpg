@@ -87,42 +87,60 @@ export const Game = () => {
   }, [currentBoardX, currentBoardY]);
 
   const handleKeyDown = (keyPress: KeyPress) => {
-    const { key } = keyPress;
-    switch (key) {
-      case 'a':
-        if (playerX > 0) {
-          setPlayerX(playerX - TILE_SIZE);
-        } else if (currentBoardX > 0) {
-          setCurrentBoardX(currentBoardX - 1);
-          setPlayerX(BOARD_WIDTH - TILE_SIZE);
-        }
-        break;
-      case 'd':
-        if (playerX < boardWidth - (TILE_SIZE * 2)) {
-          setPlayerX(playerX + TILE_SIZE);
-        } else if (currentBoardX < WORLD_WIDTH - 1) {
-          setCurrentBoardX(currentBoardX + 1);
-          setPlayerX(0);
-        }
-        break;
-      case 's':
-        if (playerY < BOARD_HEIGHT - TILE_SIZE) {
-          setPlayerY(playerY + TILE_SIZE);
-        } else if (currentBoardY < WORLD_HEIGHT - 1) {
-          setCurrentBoardY(currentBoardY + 1);
-          setPlayerY(0);
-        }
-        break;
-      case 'w':
-        if (playerY > 0) {
-          setPlayerY(playerY - TILE_SIZE);
-        } else if (currentBoardY > 0) {
-          setCurrentBoardY(currentBoardY - 1);
-          setPlayerY(BOARD_HEIGHT - TILE_SIZE);
-        }
-        break;
-      default:
-      // do nothing
+    if (worldMatrix) {
+      const { key } = keyPress;
+      switch (key) {
+        case 'a':
+          if (playerX > 0) {
+            // eslint-disable-next-line max-len
+            const nextSquare = worldMatrix[currentBoardX][currentBoardY][playerY / TILE_SIZE][(playerX - TILE_SIZE) / TILE_SIZE];
+            if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
+              setPlayerX(playerX - TILE_SIZE);
+            }
+          } else if (currentBoardX > 0) {
+            setCurrentBoardX(currentBoardX - 1);
+            setPlayerX(BOARD_WIDTH - TILE_SIZE);
+          }
+          break;
+        case 'd':
+          if (playerX < boardWidth - (TILE_SIZE * 2)) {
+            // eslint-disable-next-line max-len
+            const nextSquare = worldMatrix[currentBoardX][currentBoardY][playerY / TILE_SIZE][(playerX + TILE_SIZE) / TILE_SIZE];
+            if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
+              setPlayerX(playerX + TILE_SIZE);
+            }
+          } else if (currentBoardX < WORLD_WIDTH - 1) {
+            setCurrentBoardX(currentBoardX + 1);
+            setPlayerX(0);
+          }
+          break;
+        case 's':
+          if (playerY < BOARD_HEIGHT - TILE_SIZE) {
+            // eslint-disable-next-line max-len
+            const nextSquare = worldMatrix[currentBoardX][currentBoardY][(playerY + TILE_SIZE) / TILE_SIZE][playerX / TILE_SIZE];
+            if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
+              setPlayerY(playerY + TILE_SIZE);
+            }
+          } else if (currentBoardY < WORLD_HEIGHT - 1) {
+            setCurrentBoardY(currentBoardY + 1);
+            setPlayerY(0);
+          }
+          break;
+        case 'w':
+          if (playerY > 0) {
+            // eslint-disable-next-line max-len
+            const nextSquare = worldMatrix[currentBoardX][currentBoardY][(playerY - TILE_SIZE) / TILE_SIZE][playerX / TILE_SIZE];
+            if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
+              setPlayerY(playerY - TILE_SIZE);
+            }
+          } else if (currentBoardY > 0) {
+            setCurrentBoardY(currentBoardY - 1);
+            setPlayerY(BOARD_HEIGHT - TILE_SIZE);
+          }
+          break;
+        default:
+        // do nothing
+      }
     }
   };
 

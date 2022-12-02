@@ -17,7 +17,11 @@ export const WORLD_HEIGHT = 100;
 export const STARTING_BOARD_X = WORLD_WIDTH / 2;
 export const STARTING_BOARD_Y = WORLD_HEIGHT / 2;
 
-const determineSquare = () => {
+const determineSquare = (x: number, y: number) => {
+  if (x === 0 || y === 0 || x === TILES_TALL - 1 || y === TILES_ACROSS - 1) {
+    return SQUARE_GRASS;
+  }
+
   const randomNum = Math.random();
   if (randomNum > 0 && randomNum < .03) {
     return SQUARE_TREE;
@@ -35,7 +39,7 @@ const generateBoard = (): BoardMatrix => {
   for (let i = 0; i < TILES_TALL; i++) {
     board.push([]);
     for (let j = 0; j < TILES_ACROSS; j++) {
-      board[i].push(determineSquare());
+      board[i].push(determineSquare(i, j));
     }
   }
   return board;
