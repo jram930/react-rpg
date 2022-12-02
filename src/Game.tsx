@@ -1,7 +1,16 @@
 import React from 'react';
 import { Stage, Layer, Rect } from 'react-konva';
 import { css } from '@emotion/css';
-import { GRASS, DIRT } from './colors';
+import { GRASS, DIRT, TREE, ROCK } from './colors';
+import {
+  WorldMatrix,
+  generateWorldMatrix,
+  SQUARE_GRASS,
+  SQUARE_TREE,
+  WorldSquare,
+  SQUARE_ROCK,
+  SQUARE_DIRT
+} from './worldGenerator';
 
 // 222831
 // 393E46
@@ -16,6 +25,7 @@ export const Game = () => {
 
   const BOARD_HEIGHT = 800;
   const PLAYER_DIMENSION = 30;
+  const TILE_SIZE = 30;
 
   const boardStyle = css({
     backgroundColor: DIRT,
@@ -38,11 +48,13 @@ export const Game = () => {
     paddingTop: '10px',
     paddingLeft: '30px',
     paddingRight: '30px',
-    textAlign: 'left',
+    textAlign: 'center',
     fontWeight: 50,
     fontSize: 16,
   });
 
+  const [worldMatrix, setWorldMatrix] =
+    React.useState<WorldMatrix | null>(null);
 
   const [playerX, setPlayerX] = React.useState<number>(0);
   const [playerY, setPlayerY] = React.useState<number>(0);
@@ -54,6 +66,10 @@ export const Game = () => {
   about the adventure can go here. If it is really long text it
   should be displayed in a visually ok kind of way.`);
 
+  React.useEffect(() => {
+    setWorldMatrix(generateWorldMatrix());
+  }, []);
+
   // TODO: This works if you don't resize the window, need to figure that out
   React.useEffect(() => {
     const boardElement = boardRef.current;
@@ -64,25 +80,77 @@ export const Game = () => {
     const { key } = keyPress;
     switch (key) {
       case 'a':
-        setPlayerX(playerX > 0 ? playerX - 10 : playerX);
+        setPlayerX(playerX > 0 ? playerX - TILE_SIZE : playerX);
+        setDialogue('You move to the left');
         break;
       case 'd':
         setPlayerX(playerX < boardWidth - PLAYER_DIMENSION ?
-          playerX + 10 :
+          playerX + TILE_SIZE :
           playerX);
+        setDialogue('You move to the right');
         break;
       case 's':
         setPlayerY(playerY < BOARD_HEIGHT - PLAYER_DIMENSION ?
-          playerY + 10 :
+          playerY + TILE_SIZE :
           playerY);
+        setDialogue('You move down');
         break;
       case 'w':
-        setPlayerY(playerY > 0 ? playerY - 10 : playerY);
+        setPlayerY(playerY > 0 ? playerY - TILE_SIZE : playerY);
+        setDialogue('You move up');
         break;
       default:
       // do nothing
     }
   };
+
+  const createTile = (
+    x: number,
+    y: number,
+    fill: string,
+    size = TILE_SIZE) => {
+    return (<Rect
+      key={`x${x}_y${y}`}
+      x={x}
+      y={y}
+      width={size}
+      height={size}
+      fill={fill} />);
+  }
+
+  const translateNumToColor = (num: WorldSquare) => {
+    switch (num) {
+      case SQUARE_GRASS:
+        return GRASS;
+      case SQUARE_TREE:
+        return TREE;
+      case SQUARE_ROCK:
+        return ROCK;
+      case SQUARE_DIRT:
+        return DIRT;
+    }
+  }
+
+  const generateWorldTiles = () => {
+    const tiles = [];
+    if (worldMatrix) {
+      for (let i = 0; i < worldMatrix.length; i++) {
+        for (let j = 0; j < worldMatrix[i].length; j++) {
+          tiles.push(createTile(
+            j * TILE_SIZE,
+            i * TILE_SIZE,
+            translateNumToColor(worldMatrix[i][j]),
+            TILE_SIZE,
+          ));
+        }
+      }
+    }
+    return tiles;
+  }
+
+  const worldTiles = React.useMemo(() => {
+    return generateWorldTiles();
+  }, [worldMatrix]);
 
   return (
     // Stage - is a div wrapper
@@ -97,24 +165,7 @@ export const Game = () => {
         ref={boardRef}>
         <Stage width={boardWidth - 2} height={BOARD_HEIGHT}>
           <Layer>
-            <Rect
-              x={0}
-              y={0}
-              width={boardWidth / 3}
-              height={BOARD_HEIGHT}
-              fill={GRASS} />
-            <Rect
-              x={boardWidth / 3 + 60}
-              y={0}
-              width={boardWidth}
-              height={BOARD_HEIGHT / 3}
-              fill={GRASS} />
-            <Rect
-              x={boardWidth / 3 + 60}
-              y={BOARD_HEIGHT - 480}
-              width={boardWidth}
-              height={BOARD_HEIGHT}
-              fill={GRASS} />
+            {worldTiles}
           </Layer>
           <Layer>
             <Rect

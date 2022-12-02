@@ -12,7 +12,7 @@ function App() {
 
   const appStyle = css({
     backgroundColor: '#222831',
-    'text-align': 'center',
+    textAlign: 'center',
     overflow: 'hidden',
   });
 
