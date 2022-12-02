@@ -1,10 +1,21 @@
-export type WorldMatrix = Array<Array<WorldSquare>>;
+export type WorldMatrix = Array<Array<BoardMatrix>>;
+export type BoardMatrix = Array<Array<WorldSquare>>;
 
 export type WorldSquare = 0 | 1 | 2 | 3;
 export const SQUARE_GRASS = 0;
 export const SQUARE_TREE = 1;
 export const SQUARE_DIRT = 2;
 export const SQUARE_ROCK = 3;
+
+export const TILE_SIZE = 30;
+export const TILES_ACROSS = 50;
+export const TILES_TALL = 30;
+export const BOARD_HEIGHT = TILE_SIZE * TILES_TALL;
+export const BOARD_WIDTH = TILE_SIZE * TILES_ACROSS;
+export const WORLD_WIDTH = 100;
+export const WORLD_HEIGHT = 100;
+export const STARTING_BOARD_X = WORLD_WIDTH / 2;
+export const STARTING_BOARD_Y = WORLD_HEIGHT / 2;
 
 const determineSquare = () => {
   const randomNum = Math.random();
@@ -19,13 +30,24 @@ const determineSquare = () => {
   }
 }
 
+const generateBoard = (): BoardMatrix => {
+  const board: Array<Array<WorldSquare>> = [];
+  for (let i = 0; i < TILES_TALL; i++) {
+    board.push([]);
+    for (let j = 0; j < TILES_ACROSS; j++) {
+      board[i].push(determineSquare());
+    }
+  }
+  return board;
+};
+
 export const generateWorldMatrix = (): WorldMatrix => {
-  const world: Array<Array<WorldSquare>> = [];
-  for (let i = 0; i < 100; i++) {
+  const world: Array<Array<BoardMatrix>> = [];
+  for (let i = 0; i < WORLD_HEIGHT; i++) {
     world.push([]);
-    for (let j = 0; j < 100; j++) {
-      world[i].push(determineSquare());
+    for (let j = 0; j < WORLD_WIDTH; j++) {
+      world[i].push(generateBoard());
     }
   }
   return world;
-};
+}
