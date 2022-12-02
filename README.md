@@ -1,1 +1,2 @@
-# Experimenting with creating an RPG with react
+# react-rpg
+Experimenting with creating an RPG with react
