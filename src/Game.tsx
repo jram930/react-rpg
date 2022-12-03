@@ -1,7 +1,7 @@
 import React from 'react';
 import { Stage, Layer, Rect } from 'react-konva';
 import { css } from '@emotion/css';
-import { GRASS, DIRT, TREE, ROCK } from './colors';
+import { COLOR_GRASS, COLOR_DIRT, COLOR_TREE, COLOR_ROCK, COLOR_ENEMY, COLOR_PLAYER } from './colors';
 import {
   generateWorldMatrix,
   SQUARE_GRASS,
@@ -18,6 +18,7 @@ import {
   WORLD_WIDTH,
   WORLD_HEIGHT
 } from './worldGenerator';
+import { useInterval } from './util';
 
 // 222831
 // 393E46
@@ -28,11 +29,18 @@ type KeyPress = {
   key: string;
 };
 
+type WorldCoordinate = {
+  boardX: number,
+  boardY: number,
+  x: number,
+  y: number,
+}
+
 export const Game = () => {
 
   const boardStyle = css({
-    backgroundColor: DIRT,
-    marginLeft: '20px',
+    backgroundColor: COLOR_DIRT,
+    marginLeft: '30px',
     marginTop: '20px',
     width: `${BOARD_WIDTH}px`,
     height: `${BOARD_HEIGHT}px`,
@@ -59,13 +67,19 @@ export const Game = () => {
   const [worldMatrix, setWorldMatrix] =
     React.useState<WorldMatrix | null>(null);
 
-  const [currentBoardX, setCurrentBoardX] =
+  const [playerCurrentBoardX, setPlayerCurrentBoardX] =
     React.useState<number>(STARTING_BOARD_X);
-  const [currentBoardY, setCurrentBoardY] =
+  const [playerCurrentBoardY, setPlayerCurrentBoardY] =
     React.useState<number>(STARTING_BOARD_Y);
-
   const [playerX, setPlayerX] = React.useState<number>(0);
   const [playerY, setPlayerY] = React.useState<number>(0);
+
+  const [enemyCurrentBoardX, setEnemyCurrentBoardX] =
+    React.useState<number>(STARTING_BOARD_X);
+  const [enemyCurrentBoardY, setEnemyCurrentBoardY] =
+    React.useState<number>(STARTING_BOARD_Y);
+  const [enemyX, setEnemyX] = React.useState<number>(10 * TILE_SIZE);
+  const [enemyY, setEnemyY] = React.useState<number>(0);
 
   const boardRef = React.useRef<HTMLDivElement>(null);
   const [boardWidth, setBoardWidth] = React.useState<number>(0);
@@ -83,61 +97,121 @@ export const Game = () => {
   }, []);
 
   React.useEffect(() => {
-    setDialogue(`Board ${currentBoardX} ${currentBoardY}`);
-  }, [currentBoardX, currentBoardY]);
+    setDialogue(`Board ${playerCurrentBoardX} ${playerCurrentBoardY}`);
+  }, [playerCurrentBoardX, playerCurrentBoardY]);
+
+  const moveLeft = (startCoordinate: WorldCoordinate): WorldCoordinate => {
+    if (!worldMatrix) {
+      return startCoordinate;
+    }
+
+    const { x, y, boardX, boardY } = startCoordinate;
+    const endCoordinate: WorldCoordinate = { x, y, boardX, boardY };
+
+    if (x > 0) {
+      const nextSquare = worldMatrix[boardX][boardY][y / TILE_SIZE][(x - TILE_SIZE) / TILE_SIZE];
+      if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
+        endCoordinate.x = x - TILE_SIZE;
+      }
+    } else if (boardX > 0) {
+      endCoordinate.boardX = boardX - 1;
+      endCoordinate.x = BOARD_WIDTH - TILE_SIZE;
+    }
+    return endCoordinate;
+  }
+
+  const moveRight = (startCoordinate: WorldCoordinate): WorldCoordinate => {
+    if (!worldMatrix) {
+      return startCoordinate;
+    }
+
+    const { x, y, boardX, boardY } = startCoordinate;
+    const endCoordinate: WorldCoordinate = { x, y, boardX, boardY };
+
+    if (x < boardWidth - (TILE_SIZE * 2)) {
+      const nextSquare = worldMatrix[boardX][boardY][y / TILE_SIZE][(x + TILE_SIZE) / TILE_SIZE];
+      if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
+        endCoordinate.x = x + TILE_SIZE;
+      }
+    } else if (boardX < WORLD_WIDTH - 1) {
+      endCoordinate.boardX = boardX + 1;
+      endCoordinate.x = 0;
+    }
+    return endCoordinate;
+  }
+
+  const moveDown = (startCoordinate: WorldCoordinate): WorldCoordinate => {
+    if (!worldMatrix) {
+      return startCoordinate;
+    }
+
+    const { x, y, boardX, boardY } = startCoordinate;
+    const endCoordinate: WorldCoordinate = { x, y, boardX, boardY };
+
+    if (y < BOARD_HEIGHT - TILE_SIZE) {
+      const nextSquare = worldMatrix[boardX][boardY][(y + TILE_SIZE) / TILE_SIZE][x / TILE_SIZE];
+      if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
+        endCoordinate.y = y + TILE_SIZE;
+      }
+    } else if (boardY < WORLD_HEIGHT - 1) {
+      endCoordinate.boardY = boardY + 1;
+      endCoordinate.y = 0;
+    }
+    return endCoordinate;
+  }
+
+  const moveUp = (startCoordinate: WorldCoordinate): WorldCoordinate => {
+    if (!worldMatrix) {
+      return startCoordinate;
+    }
+
+    const { x, y, boardX, boardY } = startCoordinate;
+    const endCoordinate: WorldCoordinate = { x, y, boardX, boardY };
+
+    if (y > 0) {
+      const nextSquare = worldMatrix[boardX][boardY][(y - TILE_SIZE) / TILE_SIZE][x / TILE_SIZE];
+      if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
+        endCoordinate.y = y - TILE_SIZE;
+      }
+    } else if (boardY > 0) {
+      endCoordinate.boardY = boardY - 1;
+      endCoordinate.y = BOARD_HEIGHT - TILE_SIZE;
+    }
+    return endCoordinate;
+  }
 
   const handleKeyDown = (keyPress: KeyPress) => {
     if (worldMatrix) {
       const { key } = keyPress;
       switch (key) {
         case 'a':
-          if (playerX > 0) {
-            // eslint-disable-next-line max-len
-            const nextSquare = worldMatrix[currentBoardX][currentBoardY][playerY / TILE_SIZE][(playerX - TILE_SIZE) / TILE_SIZE];
-            if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
-              setPlayerX(playerX - TILE_SIZE);
-            }
-          } else if (currentBoardX > 0) {
-            setCurrentBoardX(currentBoardX - 1);
-            setPlayerX(BOARD_WIDTH - TILE_SIZE);
+          {
+            const nextPosition = moveLeft({ x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
+            setPlayerX(nextPosition.x);
+            setPlayerCurrentBoardX(nextPosition.boardX);
+            break;
           }
-          break;
         case 'd':
-          if (playerX < boardWidth - (TILE_SIZE * 2)) {
-            // eslint-disable-next-line max-len
-            const nextSquare = worldMatrix[currentBoardX][currentBoardY][playerY / TILE_SIZE][(playerX + TILE_SIZE) / TILE_SIZE];
-            if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
-              setPlayerX(playerX + TILE_SIZE);
-            }
-          } else if (currentBoardX < WORLD_WIDTH - 1) {
-            setCurrentBoardX(currentBoardX + 1);
-            setPlayerX(0);
+          {
+            const nextPosition = moveRight({ x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
+            setPlayerX(nextPosition.x);
+            setPlayerCurrentBoardX(nextPosition.boardX);
+            break;
           }
-          break;
         case 's':
-          if (playerY < BOARD_HEIGHT - TILE_SIZE) {
-            // eslint-disable-next-line max-len
-            const nextSquare = worldMatrix[currentBoardX][currentBoardY][(playerY + TILE_SIZE) / TILE_SIZE][playerX / TILE_SIZE];
-            if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
-              setPlayerY(playerY + TILE_SIZE);
-            }
-          } else if (currentBoardY < WORLD_HEIGHT - 1) {
-            setCurrentBoardY(currentBoardY + 1);
-            setPlayerY(0);
+          {
+            const nextPosition = moveDown({ x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
+            setPlayerY(nextPosition.y);
+            setPlayerCurrentBoardY(nextPosition.boardY);
+            break;
           }
-          break;
         case 'w':
-          if (playerY > 0) {
-            // eslint-disable-next-line max-len
-            const nextSquare = worldMatrix[currentBoardX][currentBoardY][(playerY - TILE_SIZE) / TILE_SIZE][playerX / TILE_SIZE];
-            if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
-              setPlayerY(playerY - TILE_SIZE);
-            }
-          } else if (currentBoardY > 0) {
-            setCurrentBoardY(currentBoardY - 1);
-            setPlayerY(BOARD_HEIGHT - TILE_SIZE);
+          {
+            const nextPosition = moveUp({ x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
+            setPlayerY(nextPosition.y);
+            setPlayerCurrentBoardY(nextPosition.boardY);
+            break;
           }
-          break;
         default:
         // do nothing
       }
@@ -158,16 +232,41 @@ export const Game = () => {
       fill={fill} />);
   }
 
+  useInterval(() => {
+    const random = Math.random();
+    if (random < 0.25) {
+      console.log('left');
+      const nextPosition = moveLeft({ x: enemyX, y: enemyY, boardX: enemyCurrentBoardX, boardY: enemyCurrentBoardY });
+      setEnemyX(nextPosition.x);
+      setEnemyCurrentBoardX(nextPosition.boardX);
+    } else if (random < 0.5) {
+      console.log('right');
+      const nextPosition = moveRight({ x: enemyX, y: enemyY, boardX: enemyCurrentBoardX, boardY: enemyCurrentBoardY });
+      setEnemyX(() => nextPosition.x);
+      setEnemyCurrentBoardX(() => nextPosition.boardX);
+    } else if (random < 0.75) {
+      console.log('up');
+      const nextPosition = moveUp({ x: enemyX, y: enemyY, boardX: enemyCurrentBoardX, boardY: enemyCurrentBoardY });
+      setEnemyY(() => nextPosition.y);
+      setEnemyCurrentBoardY(() => nextPosition.boardY);
+    } else {
+      console.log('down');
+      const nextPosition = moveDown({ x: enemyX, y: enemyY, boardX: enemyCurrentBoardX, boardY: enemyCurrentBoardY });
+      setEnemyY(() => nextPosition.y);
+      setEnemyCurrentBoardY(() => nextPosition.boardY);
+    }
+  }, 300);
+
   const translateNumToColor = (num: WorldSquare) => {
     switch (num) {
       case SQUARE_GRASS:
-        return GRASS;
+        return COLOR_GRASS;
       case SQUARE_TREE:
-        return TREE;
+        return COLOR_TREE;
       case SQUARE_ROCK:
-        return ROCK;
+        return COLOR_ROCK;
       case SQUARE_DIRT:
-        return DIRT;
+        return COLOR_DIRT;
     }
   }
 
@@ -190,8 +289,10 @@ export const Game = () => {
   }
 
   const worldTiles = React.useMemo(() => {
-    return generateWorldTiles(currentBoardX, currentBoardY);
-  }, [worldMatrix, currentBoardX, currentBoardY]);
+    return generateWorldTiles(playerCurrentBoardX, playerCurrentBoardY);
+  }, [worldMatrix, playerCurrentBoardX, playerCurrentBoardY]);
+
+  const enemyOnPlayerBoard = playerCurrentBoardX === enemyCurrentBoardX && playerCurrentBoardY === enemyCurrentBoardY;
 
   return (
     // Stage - is a div wrapper
@@ -209,12 +310,20 @@ export const Game = () => {
             {worldTiles}
           </Layer>
           <Layer>
+            {enemyOnPlayerBoard && <Rect
+              width={TILE_SIZE}
+              height={TILE_SIZE}
+              x={enemyX}
+              y={enemyY}
+              fill={COLOR_ENEMY} />}
+          </Layer>
+          <Layer>
             <Rect
               width={TILE_SIZE}
               height={TILE_SIZE}
               x={playerX}
               y={playerY}
-              fill="#D65A31" />
+              fill={COLOR_PLAYER} />
           </Layer>
         </Stage>
       </div>

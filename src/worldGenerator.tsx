@@ -8,8 +8,8 @@ export const SQUARE_DIRT = 2;
 export const SQUARE_ROCK = 3;
 
 export const TILE_SIZE = 30;
-export const TILES_ACROSS = 50;
-export const TILES_TALL = 30;
+export const TILES_ACROSS = 62;
+export const TILES_TALL = 26;
 export const BOARD_HEIGHT = TILE_SIZE * TILES_TALL;
 export const BOARD_WIDTH = TILE_SIZE * TILES_ACROSS;
 export const WORLD_WIDTH = 100;
