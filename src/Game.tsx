@@ -15,10 +15,11 @@ import {
   WorldMatrix,
   STARTING_BOARD_X,
   STARTING_BOARD_Y,
-  WORLD_WIDTH,
-  WORLD_HEIGHT
+  WorldCoordinate,
 } from './worldGenerator';
 import { useInterval } from './util';
+import { moveLeft, moveRight, moveUp, moveDown } from './movement';
+import { generateEnemies, moveAllEnemies } from './enemies';
 
 // 222831
 // 393E46
@@ -28,13 +29,6 @@ import { useInterval } from './util';
 type KeyPress = {
   key: string;
 };
-
-type WorldCoordinate = {
-  boardX: number,
-  boardY: number,
-  x: number,
-  y: number,
-}
 
 export const Game = () => {
 
@@ -66,6 +60,7 @@ export const Game = () => {
 
   const [worldMatrix, setWorldMatrix] =
     React.useState<WorldMatrix | null>(null);
+  const [enemies, setEnemies] = React.useState<Array<WorldCoordinate>>([]);
 
   const [playerCurrentBoardX, setPlayerCurrentBoardX] =
     React.useState<number>(STARTING_BOARD_X);
@@ -74,111 +69,20 @@ export const Game = () => {
   const [playerX, setPlayerX] = React.useState<number>(0);
   const [playerY, setPlayerY] = React.useState<number>(0);
 
-  const [enemyCurrentBoardX, setEnemyCurrentBoardX] =
-    React.useState<number>(STARTING_BOARD_X);
-  const [enemyCurrentBoardY, setEnemyCurrentBoardY] =
-    React.useState<number>(STARTING_BOARD_Y);
-  const [enemyX, setEnemyX] = React.useState<number>(10 * TILE_SIZE);
-  const [enemyY, setEnemyY] = React.useState<number>(0);
+  const [tick, setTick] = React.useState<number>(0);
 
   const boardRef = React.useRef<HTMLDivElement>(null);
-  const [boardWidth, setBoardWidth] = React.useState<number>(0);
 
   const [dialogue, setDialogue] = React.useState<string>(`Loading...`);
 
   React.useEffect(() => {
     setWorldMatrix(generateWorldMatrix());
-  }, []);
-
-  // TODO: This works if you don't resize the window, need to figure that out
-  React.useEffect(() => {
-    const boardElement = boardRef.current;
-    setBoardWidth(boardElement?.offsetWidth ?? 0);
+    setEnemies(generateEnemies());
   }, []);
 
   React.useEffect(() => {
     setDialogue(`Board ${playerCurrentBoardX} ${playerCurrentBoardY}`);
   }, [playerCurrentBoardX, playerCurrentBoardY]);
-
-  const moveLeft = (startCoordinate: WorldCoordinate): WorldCoordinate => {
-    if (!worldMatrix) {
-      return startCoordinate;
-    }
-
-    const { x, y, boardX, boardY } = startCoordinate;
-    const endCoordinate: WorldCoordinate = { x, y, boardX, boardY };
-
-    if (x > 0) {
-      const nextSquare = worldMatrix[boardX][boardY][y / TILE_SIZE][(x - TILE_SIZE) / TILE_SIZE];
-      if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
-        endCoordinate.x = x - TILE_SIZE;
-      }
-    } else if (boardX > 0) {
-      endCoordinate.boardX = boardX - 1;
-      endCoordinate.x = BOARD_WIDTH - TILE_SIZE;
-    }
-    return endCoordinate;
-  }
-
-  const moveRight = (startCoordinate: WorldCoordinate): WorldCoordinate => {
-    if (!worldMatrix) {
-      return startCoordinate;
-    }
-
-    const { x, y, boardX, boardY } = startCoordinate;
-    const endCoordinate: WorldCoordinate = { x, y, boardX, boardY };
-
-    if (x < boardWidth - (TILE_SIZE * 2)) {
-      const nextSquare = worldMatrix[boardX][boardY][y / TILE_SIZE][(x + TILE_SIZE) / TILE_SIZE];
-      if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
-        endCoordinate.x = x + TILE_SIZE;
-      }
-    } else if (boardX < WORLD_WIDTH - 1) {
-      endCoordinate.boardX = boardX + 1;
-      endCoordinate.x = 0;
-    }
-    return endCoordinate;
-  }
-
-  const moveDown = (startCoordinate: WorldCoordinate): WorldCoordinate => {
-    if (!worldMatrix) {
-      return startCoordinate;
-    }
-
-    const { x, y, boardX, boardY } = startCoordinate;
-    const endCoordinate: WorldCoordinate = { x, y, boardX, boardY };
-
-    if (y < BOARD_HEIGHT - TILE_SIZE) {
-      const nextSquare = worldMatrix[boardX][boardY][(y + TILE_SIZE) / TILE_SIZE][x / TILE_SIZE];
-      if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
-        endCoordinate.y = y + TILE_SIZE;
-      }
-    } else if (boardY < WORLD_HEIGHT - 1) {
-      endCoordinate.boardY = boardY + 1;
-      endCoordinate.y = 0;
-    }
-    return endCoordinate;
-  }
-
-  const moveUp = (startCoordinate: WorldCoordinate): WorldCoordinate => {
-    if (!worldMatrix) {
-      return startCoordinate;
-    }
-
-    const { x, y, boardX, boardY } = startCoordinate;
-    const endCoordinate: WorldCoordinate = { x, y, boardX, boardY };
-
-    if (y > 0) {
-      const nextSquare = worldMatrix[boardX][boardY][(y - TILE_SIZE) / TILE_SIZE][x / TILE_SIZE];
-      if (nextSquare === SQUARE_DIRT || nextSquare === SQUARE_GRASS) {
-        endCoordinate.y = y - TILE_SIZE;
-      }
-    } else if (boardY > 0) {
-      endCoordinate.boardY = boardY - 1;
-      endCoordinate.y = BOARD_HEIGHT - TILE_SIZE;
-    }
-    return endCoordinate;
-  }
 
   const handleKeyDown = (keyPress: KeyPress) => {
     if (worldMatrix) {
@@ -186,28 +90,28 @@ export const Game = () => {
       switch (key) {
         case 'a':
           {
-            const nextPosition = moveLeft({ x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
+            const nextPosition = moveLeft(worldMatrix, { x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
             setPlayerX(nextPosition.x);
             setPlayerCurrentBoardX(nextPosition.boardX);
             break;
           }
         case 'd':
           {
-            const nextPosition = moveRight({ x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
+            const nextPosition = moveRight(worldMatrix, { x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
             setPlayerX(nextPosition.x);
             setPlayerCurrentBoardX(nextPosition.boardX);
             break;
           }
         case 's':
           {
-            const nextPosition = moveDown({ x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
+            const nextPosition = moveDown(worldMatrix, { x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
             setPlayerY(nextPosition.y);
             setPlayerCurrentBoardY(nextPosition.boardY);
             break;
           }
         case 'w':
           {
-            const nextPosition = moveUp({ x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
+            const nextPosition = moveUp(worldMatrix, { x: playerX, y: playerY, boardX: playerCurrentBoardX, boardY: playerCurrentBoardY });
             setPlayerY(nextPosition.y);
             setPlayerCurrentBoardY(nextPosition.boardY);
             break;
@@ -233,28 +137,10 @@ export const Game = () => {
   }
 
   useInterval(() => {
-    const random = Math.random();
-    if (random < 0.25) {
-      console.log('left');
-      const nextPosition = moveLeft({ x: enemyX, y: enemyY, boardX: enemyCurrentBoardX, boardY: enemyCurrentBoardY });
-      setEnemyX(nextPosition.x);
-      setEnemyCurrentBoardX(nextPosition.boardX);
-    } else if (random < 0.5) {
-      console.log('right');
-      const nextPosition = moveRight({ x: enemyX, y: enemyY, boardX: enemyCurrentBoardX, boardY: enemyCurrentBoardY });
-      setEnemyX(() => nextPosition.x);
-      setEnemyCurrentBoardX(() => nextPosition.boardX);
-    } else if (random < 0.75) {
-      console.log('up');
-      const nextPosition = moveUp({ x: enemyX, y: enemyY, boardX: enemyCurrentBoardX, boardY: enemyCurrentBoardY });
-      setEnemyY(() => nextPosition.y);
-      setEnemyCurrentBoardY(() => nextPosition.boardY);
-    } else {
-      console.log('down');
-      const nextPosition = moveDown({ x: enemyX, y: enemyY, boardX: enemyCurrentBoardX, boardY: enemyCurrentBoardY });
-      setEnemyY(() => nextPosition.y);
-      setEnemyCurrentBoardY(() => nextPosition.boardY);
+    if (worldMatrix) {
+      moveAllEnemies(worldMatrix, enemies);
     }
+    setTick(tick + 1);
   }, 300);
 
   const translateNumToColor = (num: WorldSquare) => {
@@ -268,6 +154,23 @@ export const Game = () => {
       case SQUARE_DIRT:
         return COLOR_DIRT;
     }
+  }
+
+  const generateEnemyTiles = () => {
+    const tiles: Array<JSX.Element> = [];
+
+    enemies.forEach((enemy) => {
+      if (enemy.boardX === playerCurrentBoardX && enemy.boardY === playerCurrentBoardY) {
+        tiles.push(createTile(
+          enemy.x,
+          enemy.y,
+          COLOR_ENEMY,
+          TILE_SIZE,
+        ));
+      }
+    });
+
+    return tiles;
   }
 
   const generateWorldTiles = (boardX: number, boardY: number) => {
@@ -292,8 +195,6 @@ export const Game = () => {
     return generateWorldTiles(playerCurrentBoardX, playerCurrentBoardY);
   }, [worldMatrix, playerCurrentBoardX, playerCurrentBoardY]);
 
-  const enemyOnPlayerBoard = playerCurrentBoardX === enemyCurrentBoardX && playerCurrentBoardY === enemyCurrentBoardY;
-
   return (
     // Stage - is a div wrapper
     // Layer - is an actual 2d canvas element, so you can have several layers
@@ -305,17 +206,12 @@ export const Game = () => {
         onKeyDown={handleKeyDown}
         className={boardStyle}
         ref={boardRef}>
-        <Stage width={boardWidth - 2} height={BOARD_HEIGHT}>
+        <Stage width={BOARD_WIDTH - 2} height={BOARD_HEIGHT}>
           <Layer>
             {worldTiles}
           </Layer>
           <Layer>
-            {enemyOnPlayerBoard && <Rect
-              width={TILE_SIZE}
-              height={TILE_SIZE}
-              x={enemyX}
-              y={enemyY}
-              fill={COLOR_ENEMY} />}
+            {generateEnemyTiles()}
           </Layer>
           <Layer>
             <Rect
@@ -329,6 +225,7 @@ export const Game = () => {
       </div>
       <div className={dialogueBoxStyle}>
         <p>{dialogue}</p>
+        <p>{tick}</p>
       </div>
     </>
   );

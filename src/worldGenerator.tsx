@@ -17,6 +17,13 @@ export const WORLD_HEIGHT = 100;
 export const STARTING_BOARD_X = WORLD_WIDTH / 2;
 export const STARTING_BOARD_Y = WORLD_HEIGHT / 2;
 
+export type WorldCoordinate = {
+  boardX: number,
+  boardY: number,
+  x: number,
+  y: number,
+}
+
 const determineSquare = (x: number, y: number) => {
   if (x === 0 || y === 0 || x === TILES_TALL - 1 || y === TILES_ACROSS - 1) {
     return SQUARE_GRASS;
